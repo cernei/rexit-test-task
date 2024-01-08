@@ -194,7 +194,11 @@
                             perPage: this.pagination.perPage,
                         }),
                     });
-                    this.pagination = await response.json();
+                    if (response.ok) {
+                        this.pagination = await response.json();
+                    }
+
+                    return response;
                 } catch (error) {
                     console.log(error);
                 }
@@ -229,13 +233,13 @@
             },
             async init() {
                 try {
-                    await this.paginate();
-                    if (this.pagination.data.length) {
+                    const response = await this.paginate();
+                    if (response.ok) {
                         this.loaded = true;
+                        const response2 = await fetch("http://localhost:8080/api/dictionaries");
+                        const result2 = await response2.json();
+                        this.dictionaries = result2.data;
                     }
-                    const response2 = await fetch("http://localhost:8080/api/dictionaries");
-                    const result2 = await response2.json();
-                    this.dictionaries = result2.data;
                 } catch (error) {
                     console.log(error);
                 }

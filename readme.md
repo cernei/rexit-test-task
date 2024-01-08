@@ -7,6 +7,7 @@ This readme assumes you have docker installed.
 2) Run `cd rexit-test-task/.docker`
 3) Run `docker compose up` 
 
-Configuration assumes you have 8080 port available, otherwise you manually have to map container's port to avaialble one on your machine in `docker.compose.yml` file
+Configuration assumes you have 8080 port available, otherwise you have to manually map container's port to available one on your machine in `docker.compose.yml` file
 
-4) Navigate to `http://localhost:8080/frontend-app.html`
+4) Wait until all containers are built and started. Look at the logs.
+5) Navigate to `http://localhost:8080/frontend-app.html`

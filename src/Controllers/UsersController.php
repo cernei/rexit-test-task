@@ -92,11 +92,11 @@ class UsersController {
 
             $result = $statement->paginate($requestParams['page'], $requestParams['perPage']);
 
+            return jsonResponse($result);
         } else {
-            $result = ['message' => 'Table doesnt exist'];
+            return jsonResponse(['message' => 'Table doesnt exist'], 400);
         }
 
-        return jsonResponse($result);
     }
 
 

@@ -13,7 +13,8 @@ function csvGenerator($filePath, $delimiter = ','): Generator
     }
 }
 
-function jsonResponse($data) {
+function jsonResponse($data, $code = 200) {
+    http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
 
     return json_encode($data);
