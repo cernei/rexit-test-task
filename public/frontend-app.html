@@ -1,0 +1,250 @@
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>Rexit test task</title>
+    <style>
+        html {
+            font-size: 14px;
+        }
+        [data-theme="light"],
+        :root:not([data-theme="dark"]) {
+            --secondary: #53a44f;
+            --secondary-hover: #72c56c;
+            --secondary-focus: rgb(222, 246, 222);
+            --secondary-inverse: #FFF;
+        }
+
+    </style>
+</head>
+<body >
+    <main class="container" id="app">
+        <template v-if="loaded">
+            <div class="grid">
+                <h1>Users</h1>
+                <div style="width: 50%; height: 20px" class="grid">
+                    <button type="button" class="secondary" @click="truncate">Reimport</button>
+                    <button type="button" class="secondary" @click="exportCsv">Export</button>
+                </div>
+            </div>
+            <div class="grid">
+                <label for="category">
+                    Category
+                    <select id="category" v-model="form.category">
+                        <option></option>
+                        <template v-for="item in dictionaries.category">
+                            <option :value="item">{{ item }}</option>
+                        </template>
+                    </select>
+                </label>
+
+                <label>
+                    Gender
+                    <select v-model="form.gender">
+                        <option></option>
+                        <template v-for="item in dictionaries.gender">
+                            <option :value="item">{{ item }}</option>
+                        </template>
+                    </select>
+                </label>
+                <label>
+                    Date of birth
+                    <input type="date" v-model="form.birthDate">
+                </label>
+                <label>
+                    Age from
+                    <select v-model="form.ageFrom">
+                        <option value=""></option>
+                        <template v-for="item in dictionaries.age">
+                            <option :value="item">{{ item }}</option>
+                        </template>
+                    </select>
+                </label>
+                <label>
+                    Age to
+                    <select v-model="form.ageTo">
+                        <option value="" ></option>
+                        <template v-for="item in dictionaries.age">
+                            <option :value="item">{{ item }}</option>
+                        </template>
+                    </select>
+                </label>
+                <label>
+                    &nbsp;
+                    <button type="button" @click="submit">Submit</button>
+                </label>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th scope="col" v-for="(row, fieldName) in pagination.data[0]">{{ fieldName }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="row in pagination.data">
+                    <td v-for="field in row">{{ field }}</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="grid" style="width: 70%">
+                <span style="font-size: 20px;">Pages: {{ pagination.currentPage }} / {{ pagination.totalPages }}</span>
+                <button @click="prevPage" :disabled="pagination.currentPage === 1">Previous</button>
+                <button @click="nextPage" :disabled="pagination.currentPage === pagination.totalPages">Next</button>
+                <span style="font-size: 20px;">Total: {{ pagination.total }}</span>
+            </div>
+        </template>
+        <template v-else>
+            <div v-if="uploading">
+                <h1 aria-busy="true">Please wait</h1>
+            </div>
+            <div v-else>
+                <div>
+                    <h1>No data. Try to make import.</h1>
+                </div>
+                <div style="width: 20%; ">
+                    <input type="file" id="file" name="file" accept="text/csv, .txt, .csv" />
+                    <button type="button" @click="upload">Import</button>
+                </div>
+            </div>
+
+        </template>
+    </main>
+
+<script>
+    const { createApp, ref } = Vue
+
+    createApp({
+        setup() {
+            const pagination = ref({
+                data: [],
+                currentPage: 1,
+                totalPages: 1,
+                perPage: 10,
+            });
+            const form = ref({
+                category: '',
+                gender: '',
+                birthDate: '',
+                ageFrom: '',
+                ageTo: '',
+            });
+            const dictionaries = ref({
+                category: [],
+                gender: [],
+                ageFrom: [],
+                ageTo: [],
+            });
+            let loaded = ref(false);
+            let uploading = ref(false);
+
+            return {
+                pagination,
+                form,
+                dictionaries,
+                loaded,
+                uploading,
+            }
+        },
+        methods: {
+            prevPage() {
+                if (this.pagination.currentPage > 1) {
+                    this.pagination.currentPage -= 1;
+                    this.paginate();
+                }
+            },
+            nextPage() {
+                if (this.pagination.currentPage < this.pagination.totalPages) {
+                    this.pagination.currentPage += 1;
+                    this.paginate();
+                }
+            },
+            async submit() {
+                this.pagination.currentPage = 1;
+                await this.paginate();
+            },
+            async exportCsv() {
+                try {
+                    const response = await fetch("http://localhost:8080/api/users/exportCsv", {
+                        method: "POST", // *GET, POST, PUT, DELETE, etc.
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            filters: this.form,
+                        }),
+                    });
+                    const blob = await response.blob();
+                    const file = window.URL.createObjectURL(blob);
+                    window.location.assign(file);
+
+                } catch (error) {
+                    console.log(error);
+                }
+            },
+            async paginate() {
+                try {
+                    const response = await fetch("http://localhost:8080/api/users/paginate", {
+                        method: "POST", // *GET, POST, PUT, DELETE, etc.
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            filters: this.form,
+                            page: this.pagination.currentPage,
+                            perPage: this.pagination.perPage,
+                        }),
+                    });
+                    this.pagination = await response.json();
+                } catch (error) {
+                    console.log(error);
+                }
+            },
+
+            async truncate() {
+                try {
+                    await fetch("http://localhost:8080/api/users/truncate");
+                    this.loaded = false;
+                } catch (error) {
+                    console.log(error);
+                }
+            },
+            async upload() {
+                try {
+                    this.uploading = true;
+                    const formData = new FormData();
+                    const fileField = document.querySelector('input[type="file"]');
+                    formData.append("dataset", fileField.files[0]);
+                    const response =  await fetch("http://localhost:8080/api/users/upload", {
+                        method: "POST",
+                        body: formData,
+                    });
+                    this.uploading = false;
+
+                    await this.init();
+
+                } catch (error) {
+                    this.uploading = false;
+                    console.log(error);
+                }
+            },
+            async init() {
+                try {
+                    await this.paginate();
+                    if (this.pagination.data.length) {
+                        this.loaded = true;
+                    }
+                    const response2 = await fetch("http://localhost:8080/api/dictionaries");
+                    const result2 = await response2.json();
+                    this.dictionaries = result2.data;
+                } catch (error) {
+                    console.log(error);
+                }
+            }
+        },
+        async mounted() {
+            await this.init();
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
