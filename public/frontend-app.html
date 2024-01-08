@@ -86,12 +86,12 @@
                 </tr>
                 </tbody>
             </table>
-            <div class="grid" style="width: 70%">
+            <div class="grid" style="width: 70%" v-if="pagination.total">
                 <span style="font-size: 20px;">Pages: {{ pagination.currentPage }} / {{ pagination.totalPages }}</span>
                 <button @click="prevPage" :disabled="pagination.currentPage === 1">Previous</button>
                 <button @click="nextPage" :disabled="pagination.currentPage === pagination.totalPages">Next</button>
-                <span style="font-size: 20px;">Total: {{ pagination.total }}</span>
             </div>
+            <span style="font-size: 20px;">Total: {{ pagination.total }} records</span>
         </template>
         <template v-else>
             <div v-if="uploading">
@@ -222,9 +222,13 @@
                         method: "POST",
                         body: formData,
                     });
-                    this.uploading = false;
 
-                    await this.init();
+                    // wait until mysql processes transaction queue, since it may work async regarding php proccess
+                    // This is to prevent misleading of the user when he sees count not exactly the same in csv
+                    setTimeout(() => {
+                        this.uploading = false;
+                        this.init();
+                    }, 1000);
 
                 } catch (error) {
                     this.uploading = false;
