@@ -11,6 +11,7 @@ class QueryBuilder
     private string $table;
     private string $select = '*';
     private array $where = [];
+    private array $whereValues = [];
 
     public function __construct(
     ) {
@@ -26,7 +27,8 @@ class QueryBuilder
 
     public function addWhere(string $param, string $operator, string $value): static
     {
-        $this->where[] = $param . $operator . "'" . $value . "'";
+        $this->where[] = $param . $operator . ":". $param;
+        $this->whereValues[$param] = $value;
 
         return $this;
     }
@@ -89,9 +91,10 @@ class QueryBuilder
         }
 //        echo $sql;
 
-        $req = $this->db->query($sql);
+        $statement = $this->db->prepare($sql);
+        $statement->execute($this->whereValues);
 
-        return $req->fetchAll(PDO::FETCH_ASSOC);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function paginate($page = 1, $perPage = 10): array
@@ -104,13 +107,15 @@ class QueryBuilder
             $sqlCount .= $whereStatement;
         }
         $sql .= ' LIMIT '. (($page - 1)  * $perPage) . ',' . $perPage;
-//        echo $sql;
 
-        $request = $this->db->query($sql);
-        $data = $request->fetchAll(PDO::FETCH_ASSOC);
+        $statement = $this->db->prepare($sql);
+        $statement->execute($this->whereValues);
 
-        $requestCount = $this->db->query($sqlCount);
-        $total = $requestCount->fetch(PDO::FETCH_ASSOC);
+        $data = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $statement = $this->db->prepare($sqlCount);
+        $statement->execute($this->whereValues);
+        $total = $statement->fetch(PDO::FETCH_ASSOC);
 
         return [
             'data' => $data,
